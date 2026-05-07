@@ -586,6 +586,7 @@ async function restaurarSesion() {
   // Restaurar lista de alumnos si no está cargada (p.ej. al reabrir el navegador)
   if(!EC.alumnos.length && s.alumnos?.length) {
     EC.alumnos = s.alumnos;
+    guardarLista();
     toast('📋 Lista de alumnos recuperada desde sesión guardada', 'info', 4000);
   }
 
