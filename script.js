@@ -93,7 +93,23 @@ document.addEventListener('keydown', e => { if(e.ctrlKey && e.shiftKey && e.key=
    Solo guarda ID+hora+tipo (no nombres completos).
    Base64 ofuscado + checksum anti-manipulación.
    ══════════════════════════════════════════════ */
-const LS_KEY = 'ec5_jornada';
+const LS_KEY   = 'ec5_jornada';
+const LS_LISTA = 'ec5_lista';   // persiste todo el año escolar
+
+function guardarLista() {
+  try {
+    if(!EC.alumnos.length) return;
+    const payload = { alumnos: EC.alumnos, fecha: new Date().toLocaleDateString('es-VE',{timeZone:'America/Caracas'}) };
+    localStorage.setItem(LS_LISTA, JSON.stringify(payload));
+  } catch(e) { /* QuotaExceeded */ }
+}
+
+function cargarListaGuardada() {
+  try {
+    const raw = localStorage.getItem(LS_LISTA);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
 
 async function guardarSesion() {
   try {
@@ -386,6 +402,7 @@ function procesarExcel(rawData, map) {
 
   renderListas(); renderTablaGlobal(); renderDashboard(); actualizarContadores();
   guardarSesion();
+  guardarLista();
   toast(`✅ ${EC.alumnos.length} alumnos cargados correctamente`, 'ok');
   audit(`Excel cargado: ${EC.alumnos.length} alumnos`, 'OK');
 }
@@ -407,14 +424,20 @@ function renderPreviewExcel() {
     </tbody></table>`;
 }
 
-function resetExcel() {
-  EC.alumnos=[]; EC.registros=[];
+function resetExcel() { cambiarLista(); }
+
+function cambiarLista() {
+  const n = EC.alumnos.length;
+  if(n && !confirm(`⚠️ ¿Cambiar la lista del plantel?\n\nSe eliminarán los ${n} alumnos actuales y deberás cargar el Excel del nuevo año o sección.\n\nLos registros de asistencia del día no se pierden.`)) return;
+  EC.alumnos = [];
+  localStorage.removeItem(LS_LISTA);
   document.getElementById('excelPreview')?.classList.add('hidden');
   const uz = document.getElementById('uploadZone'); if(uz) uz.style.display='';
   const qs = document.getElementById('qrSection'); if(qs) qs.classList.add('hidden');
   const fi = document.getElementById('fileInput'); if(fi) fi.value='';
   renderTablaGlobal(); actualizarContadores();
-  audit('Lista eliminada por el usuario','WARN');
+  audit('Lista del plantel eliminada — cambio de año/sección', 'WARN');
+  toast('📋 Lista eliminada. Carga el Excel del nuevo año o sección.', 'warn', 5000);
 }
 
 function exportarBackup() {
@@ -1567,12 +1590,24 @@ function cerrarModal(id) {
     const ah=document.getElementById('alertHttps');
     if(ah) ah.classList.remove('hidden');
   }
+  // Cargar lista del plantel (persiste todo el año escolar)
+  const listaGuardada = cargarListaGuardada();
+  if(listaGuardada?.alumnos?.length) {
+    EC.alumnos = listaGuardada.alumnos;
+    EC.alumnos.forEach(a => { if(EC.histRetardos[a.id]===undefined) EC.histRetardos[a.id]=0; });
+    const em = document.getElementById('excelMsg');
+    if(em) em.textContent = `📋 Lista guardada · ${EC.alumnos.length} alumnos · Cargada el ${listaGuardada.fecha}`;
+    document.getElementById('excelPreview')?.classList.remove('hidden');
+    document.getElementById('uploadZone')?.style.setProperty('display','none');
+    renderPreviewExcel();
+    renderTablaGlobal(); actualizarContadores();
+    audit(`Lista restaurada: ${EC.alumnos.length} alumnos`, 'OK');
+  }
   // Restaurar historial de retardos si existe sesión previa
   const sesGuardada = await cargarSesion();
   if(sesGuardada?.retardos) Object.assign(EC.histRetardos, sesGuardada.retardos);
   // Inicializar status bar con fecha actual
   actualizarStatusBar();
-  // Mostrar fecha en status bar
   const sbF=document.getElementById('sbFecha');
   if(sbF) sbF.textContent = '';
   audit('Sistema El Carmen v5 iniciado', 'INFO');
