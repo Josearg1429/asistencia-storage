@@ -1,0 +1,115 @@
+══════════════════════════════════════════════════════════════
+  SISTEMA EL CARMEN v5 — Instrucciones de Uso
+  Plataforma Telemática Educativa
+══════════════════════════════════════════════════════════════
+
+ARCHIVOS DEL SISTEMA
+────────────────────
+  index.html           Interfaz principal
+  styles.css           Estilos (no modificar)
+  script.js            Lógica del sistema (no modificar)
+  servidor.exe         Servidor HTTPS local (Windows)
+  INICIAR_WINDOWS.bat  Iniciar en Windows (doble clic)
+  iniciar_linux.sh     Iniciar en Linux / macOS
+  servidor.py          Código fuente del servidor (Linux/macOS)
+
+
+OPCIÓN 1: SOLO PC (sin teléfonos)
+──────────────────────────────────
+  Doble clic en index.html
+  Se abre en el navegador. Todos los QR, Excel y PPTX
+  funcionan. La cámara puede fallar en Chrome por ser
+  file:// — usa el ingreso manual de ID en ese caso.
+
+
+OPCIÓN 2: PC + TELÉFONOS en red WiFi (recomendado)
+────────────────────────────────────────────────────
+
+  Windows:
+    Doble clic en INICIAR_WINDOWS.bat
+    NO requiere instalar Python ni nada más.
+    Todo está incluido en servidor.exe.
+
+  Linux / macOS:
+    Requiere Python 3 instalado.
+    Ubuntu/Debian: sudo apt install python3
+    macOS:         brew install python3
+
+    chmod +x iniciar_linux.sh
+    ./iniciar_linux.sh
+    (instala cryptography automáticamente si falta)
+
+  El servidor se inicia en HTTPS (puerto 8443).
+  El navegador de la PC se abre automáticamente.
+
+  Para conectar el teléfono:
+    1. Conecta el teléfono a la misma red WiFi que la PC
+    2. La URL aparece en pantalla al iniciar el servidor
+       Ejemplo: https://192.168.1.100:8443
+    3. Ábrela en el navegador del teléfono
+
+  IMPORTANTE — Firewall de Windows:
+    La primera vez que ejecutes servidor.exe, Windows
+    mostrará una alerta del firewall. Marca la casilla
+    "Redes privadas" y pulsa "Permitir acceso", o los
+    teléfonos no podrán conectarse.
+
+
+ACEPTAR EL CERTIFICADO EN EL TELÉFONO (una sola vez)
+──────────────────────────────────────────────────────
+  El certificado es autofirmado (generado en tu PC).
+  El navegador muestra una advertencia de seguridad.
+  Es seguro aceptarla — los datos nunca salen de tu red.
+
+  Android Chrome:
+    1. Aparece "Tu conexión no es privada"
+    2. Toca "Configuración avanzada"
+    3. Toca "Acceder a [dirección] (sitio no seguro)"
+    4. Listo. La cámara QR funciona.
+
+  iPhone / iPad Safari:
+    1. Aparece "Esta conexión no es privada"
+    2. Toca "Mostrar detalles"
+    3. Toca "Visitar este sitio web"
+    4. Confirma en el aviso que aparece
+    5. La cámara QR funciona.
+
+  PPTX en iPhone/iPad:
+    El sistema detecta iOS automáticamente.
+    Al pulsar "Exportar Carnets PPTX" aparece el menú
+    para compartir el archivo a Keynote, Google Slides,
+    Archivos, o cualquier app compatible.
+
+
+FLUJO DE USO
+────────────
+  Pestaña LISTA
+    Cargar Excel → El sistema detecta columnas automáticamente
+    Verificar en la tabla de preview numerada
+    "Exportar Carnets PPTX" → genera y descarga los carnets
+    (no hay pasos intermedios — los QR se generan solos)
+
+  Pestaña ESCÁNER
+    Iniciar sesión → Escanear carnets o ingresar ID manual
+    El sistema distingue Puntual / Tardío automáticamente
+    "Fin de Jornada" → resumen + Excel con estados
+
+  Pestaña REGISTRO
+    Ver todos los alumnos · Búsqueda difusa · Exportar
+
+  Pestaña DASHBOARD
+    Retardos semanales · Semáforo · Generar citaciones
+
+  Botón 🆘 (flotante, siempre visible)
+    Recuento de emergencia / evacuación en tiempo real
+
+
+COMPATIBILIDAD
+──────────────
+  PC Windows:  Chrome, Edge, Firefox  ✅
+  PC Linux:    Chrome, Firefox         ✅
+  Android:     Chrome  ✅  (cámara QR con HTTPS)
+  iPhone/iPad: Safari  ✅  (cámara QR con HTTPS, PPTX vía compartir)
+  Sin internet: funciona offline tras primera carga de CDN  ✅
+
+══════════════════════════════════════════════════════════════

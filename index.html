@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#060d1a">
+  <meta name="apple-mobile-web-app-title" content="El Carmen v5">
+  <title>Sistema El Carmen v5 — Jornada Escolar</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    /* Bootstrap de tema — se ejecuta antes del render para evitar flash */
+    (function(){
+      try {
+        var t = localStorage.getItem('elcarmen_theme') || 'original';
+        if (t !== 'original') document.documentElement.setAttribute('data-theme', t);
+      } catch(e) {}
+    })();
+  </script>
+</head>
+<body>
+
+<!-- Toast container -->
+<div id="toastContainer"></div>
+
+<!-- FAB Emergencia flotante -->
+<button class="fab-emerg" onclick="recuentoEmergencia()" title="Recuento de emergencia">🆘</button>
+
+<!-- ═══ MODAL: CONSENTIMIENTO LOPNNA ═══ -->
+<div class="modal-overlay" id="mConsent">
+  <div class="modal-box">
+    <div class="modal-title">🛡️ Consentimiento Informado — LOPNNA</div>
+    <p style="font-size:11px;color:var(--az);margin-bottom:10px;">Art.65 · Art.73 · Ley de Infogobierno Venezuela</p>
+    <div class="modal-body">
+      Los datos procesados se usan <strong style="color:#fff;">exclusivamente</strong> para control de asistencia institucional.<br><br>
+      • Los apellidos están ofuscados en pantalla por defecto (hover o clic para revelar).<br>
+      • Los códigos QR no contienen nombres en texto plano — solo ID institucional.<br>
+      • El localStorage usa cifrado Base64 + checksum anti-manipulación.<br>
+      • Use "Nuevo Ciclo" al iniciar el año lectivo para limpiar historiales.
+    </div>
+    <label style="display:flex;align-items:center;gap:10px;background:var(--bg2);border-radius:8px;padding:10px 12px;margin-bottom:14px;cursor:pointer;">
+      <input type="checkbox" id="chkConsent" onchange="document.getElementById('btnConsent').disabled=!this.checked">
+      <span style="font-size:12px;color:var(--t2);">Acepto como docente/directivo autorizado</span>
+    </label>
+    <div class="modal-acts">
+      <button class="btn btn-ghost" onclick="cancelarConsent()">Cancelar</button>
+      <button class="btn btn-prim" id="btnConsent" disabled onclick="confirmarConsent()">✅ Firmar Digitalmente</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: MAPEO DE COLUMNAS ═══ -->
+<div class="modal-overlay hidden" id="mColMap">
+  <div class="modal-box" style="max-width:780px;">
+    <div class="modal-title">📋 Validar Columnas del Excel</div>
+    <div class="modal-body">Abajo verás los datos reales de tu Excel con cada columna numerada. Asigna la columna correcta a cada campo del sistema.</div>
+    <div id="colMapGrid" style="margin-bottom:12px;"></div>
+    <div id="colMapWarn" style="margin-bottom:12px;"></div>
+    <div class="modal-acts">
+      <button class="btn btn-ghost" onclick="cancelarColMap()">Cancelar</button>
+      <button class="btn btn-prim" onclick="confirmarColMap()">✅ Confirmar y procesar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: PROTOCOLO SALIDA ═══ -->
+<div class="modal-overlay hidden" id="mSalida">
+  <div class="modal-box">
+    <div class="modal-title">🚪 Protocolo de Salida</div>
+    <p style="font-size:11px;color:var(--nj);margin-bottom:12px;">Art. 54 LOPNNA · Seguridad de Planteles Educativos</p>
+    <div id="mSalidaInfo" style="background:var(--bg2);border-radius:9px;padding:11px;margin-bottom:13px;font-size:13px;color:var(--t1);"></div>
+    <div style="display:grid;gap:9px;margin-bottom:13px;">
+      <div><label style="font-size:10px;color:var(--t3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Motivo de salida *</label>
+        <select id="sMot" class="form-inp" style="text-align:left;">
+          <option value="">Seleccionar motivo...</option>
+          <option value="Médico">Médico / Cita médica</option>
+          <option value="Familiar">Motivo familiar</option>
+          <option value="Personal">Motivo personal</option>
+          <option value="Actividad escolar">Actividad escolar externa</option>
+        </select></div>
+      <div><label style="font-size:10px;color:var(--t3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Cédula de quien retira *</label>
+        <input type="text" id="sCed" class="form-inp" style="text-align:left;" placeholder="V-12345678"></div>
+      <div><label style="font-size:10px;color:var(--t3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Nombre de quien retira *</label>
+        <input type="text" id="sNom" class="form-inp" style="text-align:left;" placeholder="Nombre completo del representante"></div>
+    </div>
+    <div class="modal-acts">
+      <button class="btn btn-ghost" onclick="cancelarSalida()">Cancelar</button>
+      <button class="btn btn-nj" onclick="confirmarSalida()">✅ Registrar Salida</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: RESTAURAR SESIÓN ═══ -->
+<div class="modal-overlay hidden" id="mRestore">
+  <div class="modal-box">
+    <div class="modal-title">🔄 Sesión Activa Detectada</div>
+    <div class="modal-body" id="mRestoreMsg">Se encontró una sesión del día de hoy con registros previos.</div>
+    <div class="modal-acts">
+      <button class="btn btn-ghost" onclick="descartarSesion()">🗑 Nuevo día — descartar registros</button>
+      <button class="btn btn-prim" onclick="restaurarSesion()">✅ Restaurar sesión anterior</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: FINALIZAR JORNADA ═══ -->
+<div class="modal-overlay hidden" id="mFinJornada">
+  <div class="modal-box" style="max-width:600px;">
+    <div class="modal-title">📊 Resumen de Jornada — Motor de Recalculado</div>
+    <div id="finFecha" style="font-size:11px;color:var(--az);margin-bottom:12px;"></div>
+    <div id="finResumen" class="resumen-grid"></div>
+    <div class="divider"></div>
+    <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:8px;">📋 Alumnos Faltantes</div>
+    <div id="finFaltantes" style="max-height:180px;overflow-y:auto;margin-bottom:14px;"></div>
+    <div class="modal-acts">
+      <button class="btn btn-ghost" onclick="cerrarModal('mFinJornada')">Cerrar (sin exportar)</button>
+      <button class="btn btn-ok btn-sm" onclick="exportSesion()">📥 Solo Excel</button>
+      <button class="btn btn-prim" onclick="finalizarYExportar()">✅ Exportar y cerrar jornada</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: DIPLOMA ═══ -->
+<div class="modal-overlay hidden" id="mDiploma">
+  <div class="modal-box" style="max-width:580px;">
+    <div class="modal-title">⭐ Diploma de Puntualidad</div>
+    <div id="diplomaHTML" style="margin:13px 0;padding:20px;background:#fff;border-radius:10px;color:#000;font-family:Georgia,serif;"></div>
+    <div class="modal-acts">
+      <button class="btn btn-ghost" onclick="cerrarModal('mDiploma')">Cerrar</button>
+      <button class="btn btn-prim" onclick="printDiploma()">🖨️ Imprimir Diploma</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: CITACIÓN ═══ -->
+<div class="modal-overlay hidden" id="mCitacion">
+  <div class="modal-box" style="max-width:560px;">
+    <div class="modal-title">📋 Citación al Representante</div>
+    <p style="font-size:11px;color:var(--rj);margin-bottom:12px;">LOE Art.56 · LOPNNA Art.55 · Corresponsabilidad parental</p>
+    <div id="citacionHTML" style="margin-bottom:12px;"></div>
+    <div class="modal-acts">
+      <button class="btn btn-ghost" onclick="cerrarModal('mCitacion')">Cerrar</button>
+      <button class="btn btn-dngr" onclick="printCitacion()">🖨️ Imprimir Citación</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: EMERGENCIA ═══ -->
+<div class="modal-overlay hidden" id="mEmerg">
+  <div class="modal-box">
+    <div class="modal-title">🆘 Recuento de Emergencia</div>
+    <p style="font-size:11px;color:var(--rj);margin-bottom:12px;">Protocolo de evacuación · Datos en tiempo real</p>
+    <div id="emergContent"></div>
+    <div class="modal-acts">
+      <button class="btn btn-ghost" onclick="cerrarModal('mEmerg')">Cerrar</button>
+      <button class="btn btn-dngr" onclick="imprimirEmerg()">🖨️ Imprimir lista PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PANEL AUDITORÍA ═══ -->
+<div id="auditPanel">
+  <div class="flex-r" style="margin-bottom:8px;">
+    <span style="font-size:12px;font-weight:700;color:var(--az);">🔍 Auditoría Interna</span>
+    <div class="spacer"></div>
+    <button class="btn btn-ghost btn-xs" onclick="exportAudit()" title="Exportar log">📥</button>
+    <button class="btn btn-ghost btn-xs" onclick="closeAudit()">✕</button>
+  </div>
+  <div id="auditList" class="audit-list"></div>
+</div>
+
+<!-- ═══ NAVBAR ═══ -->
+<nav class="navbar">
+  <div class="nb-brand">
+    <img id="navLogo" src="" class="nb-logo" alt="El Carmen">
+    <div><div class="nb-title">El Carmen</div><div class="nb-sub">v5 · Jornada</div></div>
+  </div>
+  <div class="nb-tabs">
+    <button class="nb-tab active" onclick="showPage('generador')" id="tab-generador"><span>🎓</span><span>Lista</span></button>
+    <button class="nb-tab" onclick="showPage('lector')"    id="tab-lector"><span>📷</span><span>Escáner</span><span class="nb-badge" id="nbPres">0</span></button>
+    <button class="nb-tab" onclick="showPage('registro')"  id="tab-registro"><span>📋</span><span>Registro</span></button>
+    <button class="nb-tab" onclick="showPage('dashboard')" id="tab-dashboard"><span>📊</span><span>Dashboard</span><span class="nb-badge" id="nbDash" style="background:var(--rj);">!</span></button>
+  </div>
+  <div class="nb-right">
+    <select class="theme-select" id="themeSelect" onchange="setTheme(this.value)" title="Cambiar tema">
+      <option value="original">🎨 Original</option>
+      <option value="accesible">🌙 Accesible</option>
+      <option value="claro">☀️ Claro</option>
+    </select>
+    <button class="btn btn-ghost btn-sm" onclick="openAudit()" title="Auditoría (Ctrl+Shift+A)">🔍</button>
+    <button class="btn btn-dngr  btn-sm" onclick="confirmarCierreSesion()">⏹ Cerrar sesión</button>
+  </div>
+</nav>
+
+<!-- ═══ STATUS BAR ═══ -->
+<div class="status-bar">
+  <div class="status-item"><span class="status-dot" id="sdDot"></span><span id="sbJornada">Sin iniciar</span></div>
+  <div class="status-item">⏰ Límite: <strong id="sbHora">07:15</strong></div>
+  <div class="status-item">👤 <strong id="sbProf">—</strong></div>
+  <div class="spacer"></div>
+  <div class="status-item">💾 <span id="sbStore">LS: 0KB</span></div>
+  <div class="status-item" id="sbFecha" style="display:none;"></div>
+</div>
+<div id="alertHttps" class="hidden alert-https">
+  ⚠️ <strong>Sin HTTPS:</strong> La cámara QR requiere HTTPS o localhost. Carnets y Excel funcionan normalmente.
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     PÁGINA 1: GENERADOR DE IDENTIDAD
+     ════════════════════════════════════════════════════ -->
+<div class="page active" id="page-generador">
+  <div class="card">
+    <div class="card-hdr">
+      <div class="neo-ico" style="font-size:22px;">🎓</div>
+      <div><div class="card-title">Carga Maestra del Plantel</div>
+           <div class="card-sub">Mapeo por nombre de columna · cleanText() anti-XSS · Set() duplicados</div></div>
+      <div class="spacer"></div>
+      <div class="hora-cfg">
+        <span class="t-sm">⏰ Hora de entrada:</span>
+        <input type="time" id="horaEntradaConfig" value="07:15" class="form-inp"
+          style="width:110px;margin:0;text-align:center;font-size:13px;"
+          onchange="actualizarHoraEntrada(this.value)">
+      </div>
+    </div>
+    <div id="alertDuplicados" class="hidden"
+      style="background:rgba(220,38,38,.1);border:1px solid rgba(220,38,38,.28);border-radius:8px;padding:9px 12px;font-size:12px;color:#f87171;margin-bottom:10px;"></div>
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+      <div class="uz-ico">📁</div>
+      <div class="uz-title">Cargar Lista Excel del Plantel</div>
+      <div class="uz-sub">Columnas detectadas por nombre · Nro · Apellidos · Nombres · Grado · Sección</div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" class="hidden" onchange="pedirConsent(event,'main')">
+    </div>
+    <div id="excelPreview" class="hidden" style="margin-top:13px;">
+      <div class="alert al-ok" id="excelMsg"></div>
+      <div class="tbl-wrap" id="previewTable"></div>
+      <div class="flex-r" style="margin-top:12px;flex-wrap:wrap;">
+        <button class="btn btn-prim"  onclick="generateAllQRs()">✨ Vista QR</button>
+        <button class="btn btn-nj"    onclick="generarCarnetsPPTX()" id="btnPPTX">📑 Exportar Carnets PPTX</button>
+        <button class="btn btn-ghost" onclick="exportarBackup()">🔐 Backup cifrado</button>
+        <button class="btn btn-ghost" onclick="resetExcel()">🗑 Limpiar lista</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card hidden" id="qrSection">
+    <div class="card-hdr">
+      <div class="neo-ico" style="font-size:20px;">🔲</div>
+      <div><div class="card-title">Carnets QR Generados</div><div class="card-sub" id="qrSubtitle">—</div></div>
+      <div class="spacer"></div>
+      <button class="btn btn-ok  btn-sm" onclick="imprimirTodos()">🖨️ Todos</button>
+      <button class="btn btn-nj  btn-sm" onclick="generarCarnetsPPTX()">📑 PPTX</button>
+    </div>
+    <div id="qrGrid" class="qr-grid"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     PÁGINA 2: ESCÁNER / JORNADA
+     ════════════════════════════════════════════════════ -->
+<div class="page" id="page-lector">
+
+  <div id="loginBox">
+    <div class="login-wrap">
+      <div class="login-box">
+        <img id="loginLogo" src="" class="lg-logo" alt="Logo">
+        <div class="lg-shield"><div class="lg-shield-bg"></div><span class="lg-shield-ico">✓</span></div>
+        <div class="lg-title">Sistema El Carmen</div>
+        <div class="lg-sub">Sesión Inteligente v5</div>
+        <input type="text" id="profName" class="form-inp" placeholder="Nombre del Docente / Directivo" autocomplete="off">
+        <button class="btn btn-prim" style="width:100%;justify-content:center;padding:12px;font-size:14px;" onclick="iniciarSesion()">
+          🚀 Iniciar Sesión
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="scannerBox" class="hidden">
+
+    <!-- Banner de estado de jornada -->
+    <div id="jornadaBanner" class="jb jb-act">
+      <span id="jbIco">🟢</span>
+      <span id="jbLabel">Jornada activa</span>
+      <div class="spacer"></div>
+      <div class="hora-cfg">
+        <span class="t-sm">⏰</span>
+        <input type="time" id="horaEntrada" value="07:15"
+          style="background:transparent;border:none;color:var(--t1);font-size:12px;font-family:var(--font);cursor:pointer;outline:none;"
+          onchange="actualizarHoraEntrada(this.value)">
+        <span class="t-sm">hora de entrada</span>
+      </div>
+    </div>
+
+    <div id="alertSinLista" class="alert al-warn" style="display:none;">
+      ⚠️ Lista no cargada — el escáner no puede validar carnets.
+      <button class="btn btn-prim btn-sm" style="margin-left:auto;" onclick="document.getElementById('fileApp2').click()">📂 Cargar lista</button>
+      <input type="file" id="fileApp2" accept=".xlsx,.xls" class="hidden" onchange="pedirConsent(event,'app2')">
+    </div>
+
+    <!-- Stats en tiempo real (5 columnas) -->
+    <div class="stats-row">
+      <div class="stat-box s-az"><div class="sn" id="cTotal">0</div><div class="sl">Matrícula</div></div>
+      <div class="stat-box s-vd"><div class="sn" id="cPres">0</div><div class="sl">Presentes</div></div>
+      <div class="stat-box s-am"><div class="sn" id="cTard">0</div><div class="sl">Tardíos</div></div>
+      <div class="stat-box s-nj"><div class="sn" id="cAus">0</div><div class="sl">Ausentes</div></div>
+      <div class="stat-box s-rj"><div class="sn" id="cPorc">0%</div><div class="sl">% Asistencia</div></div>
+    </div>
+
+    <!-- Card escáner -->
+    <div class="card">
+      <div class="card-hdr">
+        <div class="neo-ico ico-eye" id="icoEye"></div>
+        <div><div class="card-title">Monitor QR Telemático</div><div class="card-sub" id="profInfo">—</div></div>
+        <div class="spacer"></div>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-right:8px;">
+          <input type="checkbox" id="chkSalida" onchange="toggleModo()">
+          <span class="t-sm" style="white-space:nowrap;">Modo Salida</span>
+        </label>
+        <button class="btn btn-ghost btn-sm" onclick="modSuplente()">👨‍🏫 Suplente</button>
+        <button class="btn btn-fin   btn-sm" onclick="abrirFinJornada()">📊 Fin de Jornada</button>
+      </div>
+
+      <div class="flex-r" style="margin-bottom:10px;gap:8px;flex-wrap:wrap;">
+        <span id="modoBadge" class="badge b-vd">⬆️ MODO ENTRADA</span>
+        <input type="text" id="inputManual" class="form-inp"
+          style="margin:0;flex:1;min-width:150px;text-align:left;padding:8px 12px;font-size:12px;"
+          placeholder="⌨️ Ingresar ID manualmente (fallback sin cámara)..."
+          onkeydown="if(event.key==='Enter')escaneoManual()">
+        <button class="btn btn-prim btn-sm" onclick="escaneoManual()">↩ Registrar</button>
+      </div>
+
+      <div id="camaraError" class="hidden"
+        style="background:rgba(217,119,6,.1);border:1px solid rgba(217,119,6,.28);border-radius:9px;padding:10px 13px;font-size:12px;color:#fbbf24;margin-bottom:10px;"></div>
+
+      <div id="scanResult" style="margin-bottom:12px;">
+        <div class="alert al-info">📷 Listo — apunta el carnet a la zona de enfoque</div>
+      </div>
+
+      <div class="scan-wrap">
+        <div class="scan-box">
+          <div id="reader"></div>
+          <div class="scan-overlay">
+            <div class="sc sc-tl"></div><div class="sc sc-tr"></div>
+            <div class="sc sc-bl"></div><div class="sc sc-br"></div>
+            <div class="scan-line"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Listas en vivo -->
+    <div class="two-col">
+      <div class="card">
+        <div style="font-size:12px;font-weight:700;color:#f87171;margin-bottom:7px;display:flex;align-items:center;gap:6px;">
+          ⏳ Pendientes <span class="badge b-rj" id="badgePend">0</span>
+        </div>
+        <div id="listaPend" class="lista-scroll"></div>
+      </div>
+      <div class="card">
+        <div style="font-size:12px;font-weight:700;color:#4ade80;margin-bottom:7px;display:flex;align-items:center;gap:6px;">
+          ✅ Presentes / Tardíos <span class="badge b-vd" id="badgePres">0</span>
+        </div>
+        <div id="listaPres" class="lista-scroll"></div>
+      </div>
+    </div>
+
+  </div><!-- /scannerBox -->
+</div><!-- /page-lector -->
+
+<!-- ════════════════════════════════════════════════════
+     PÁGINA 3: REGISTRO GLOBAL
+     ════════════════════════════════════════════════════ -->
+<div class="page" id="page-registro">
+  <div class="card">
+    <div class="card-hdr">
+      <div class="neo-ico" style="font-size:22px;">📋</div>
+      <div><div class="card-title">Registro Global</div>
+           <div class="card-sub" id="regSubtitle">Hover = revelar apellido · RETARDO automático por hora configurada</div></div>
+      <div class="spacer"></div>
+      <button class="btn btn-ok    btn-sm" onclick="exportSesion()">📥 Excel Sesión</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportGlobal()">📊 Reporte SEP</button>
+    </div>
+
+    <div class="stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px;">
+      <div class="stat-box s-az"><div class="sn" id="rTotal">0</div><div class="sl">Total</div></div>
+      <div class="stat-box s-vd"><div class="sn" id="rPres">0</div><div class="sl">Presentes</div></div>
+      <div class="stat-box s-am"><div class="sn" id="rTard">0</div><div class="sl">Tardíos</div></div>
+      <div class="stat-box s-nj"><div class="sn" id="rAus">0</div><div class="sl">Ausentes</div></div>
+    </div>
+
+    <div class="flex-r" style="margin-bottom:12px;">
+      <input type="text" class="srch" id="buscador"
+        placeholder="🔍 Búsqueda difusa — tolera errores tipográficos..."
+        oninput="filtrarDifuso()">
+      <button class="btn btn-ghost btn-sm" onclick="limpiarBusqueda()">✕</button>
+      <button class="btn btn-ghost btn-sm" onclick="toggleVista()" id="btnVista">☰ Tabla</button>
+    </div>
+
+    <div id="vistaCards" class="ipa-grid"></div>
+
+    <div id="vistaTabla" class="hidden">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr><th>Nro</th><th>Apellidos</th><th>Nombres</th><th>ID</th><th>Grado</th><th>Estado</th><th>Ret.Sem.</th><th>Acción</th></tr>
+          </thead>
+          <tbody id="tablaGlobal"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="emptyState" style="text-align:center;padding:36px;color:var(--t3);">
+      <p style="font-size:38px;">📋</p>
+      <p style="font-size:13px;margin-top:8px;">Carga el Excel en <strong style="color:var(--az);">Lista</strong></p>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     PÁGINA 4: DASHBOARD DE RETARDOS
+     ════════════════════════════════════════════════════ -->
+<div class="page" id="page-dashboard">
+  <div class="card">
+    <div class="card-hdr">
+      <div class="neo-ico" style="font-size:22px;">📊</div>
+      <div><div class="card-title">Dashboard de Retardos Semanales</div>
+           <div class="card-sub">🔴 3+ retardos = Aviso LOE Art.56 · 🟡 2 retardos · 🟢 1 retardo</div></div>
+      <div class="spacer"></div>
+      <button class="btn btn-ghost btn-sm" onclick="limpiarCicloRetardos()">🗓️ Nuevo ciclo</button>
+    </div>
+    <div class="alert al-warn" style="margin-bottom:12px;">
+      ⚖️ Alumnos con 3+ retardos semanales requieren conversación con el representante · LOE Art.56
+    </div>
+    <div id="dashRetardos"></div>
+  </div>
+  <div class="card">
+    <div class="card-hdr">
+      <div class="neo-ico" style="font-size:22px;">⭐</div>
+      <div><div class="card-title">Puntualidad Perfecta esta semana</div>
+           <div class="card-sub">Alumnos sin retardos registrados</div></div>
+    </div>
+    <div id="dashPuntuales"></div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+<script>
+  /* Selector de tema — sin tocar script.js */
+  function setTheme(t) {
+    if (t === 'original') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', t);
+    try { localStorage.setItem('elcarmen_theme', t); } catch(e) {}
+  }
+  /* Sincronizar el dropdown con el tema cargado al inicio */
+  (function(){
+    var sel = document.getElementById('themeSelect');
+    if (!sel) return;
+    var t = (function(){ try { return localStorage.getItem('elcarmen_theme'); } catch(e) { return null; } })() || 'original';
+    sel.value = t;
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+══════════════════════════════════════════════════════════════════
+  SISTEMA EL CARMEN v5 — Información de Licencias
+  Fecha de generación: 2026-05-07
+══════════════════════════════════════════════════════════════════
+
+LICENCIA DE DEMOSTRACIÓN INCLUIDA EN EL INSTALADOR
+────────────────────────────────────────────────────
+  Institución : U.E. El Carmen
+  Edición     : PRO
+  Emitida     : 2026-05-07
+  Expira      : 2027-05-07
+  Serial      : 0155CBB5
+  
+  Clave:
+  EC5-eyJpIjoiVS5FLiBFbCBDYXJtZW4iLCJlIjoiYWRtaW5AZWxjYXJtZW4uZWR1LnZlIiwiZCI6IlBSTyIsInMiOjE3NzgxODIyNzgsIngiOjE4MDk3MTgyNzgsIm4iOiIwMTU1Q0JCNSJ9.vp5pDMfM8yjynlEseOXFcg
+
+ARCHIVOS ENTREGADOS
+────────────────────
+  INSTALADOR_ElCarmen_v5.html      → Instalador profesional con 4 pasos
+                                     (Bienvenida → Licencia → Config → Instalar)
+                                     Contiene los 3 archivos del sistema embebidos.
+
+  GENERADOR_LICENCIAS_ADMIN.html   → Herramienta CONFIDENCIAL del administrador.
+                                     Genera claves para nuevas instituciones.
+                                     NO compartir con usuarios finales.
+
+CÓMO FUNCIONA EL SISTEMA DE LICENCIAS
+──────────────────────────────────────
+  Algoritmo  : HMAC-SHA256 (128 bits efectivos)
+  Clave maestra: EC5-MASTER-7f3a9b2e-4c8d-11ef-a1b2-0242ac130003
+  
+  La clave de licencia tiene el formato:
+    EC5-<PAYLOAD_BASE64URL>.<FIRMA_BASE64URL>
+  
+  El PAYLOAD contiene (codificado en JSON→Base64URL):
+    i  = nombre de la institución
+    e  = email del contacto
+    d  = edición (PRO / BASIC / SCHOOL)
+    s  = timestamp de emisión (Unix UTC)
+    x  = timestamp de expiración (Unix UTC)
+    n  = serial único (hex 4 bytes)
+  
+  La FIRMA es HMAC-SHA256(clave_maestra, PAYLOAD)[0:16]
+  verificada con Web Crypto API (nativa en el navegador).
+  No requiere internet ni servidor externo.
+
+PARA GENERAR LICENCIAS PARA NUEVAS INSTITUCIONES
+──────────────────────────────────────────────────
+  1. Abra GENERADOR_LICENCIAS_ADMIN.html en su navegador
+  2. Complete institución, correo y duración
+  3. Haga clic en "Generar clave de licencia"
+  4. Copie y entregue la clave al cliente
+
+══════════════════════════════════════════════════════════════════
+  CONFIDENCIAL — Guardar en lugar seguro con acceso restringido
+══════════════════════════════════════════════════════════════════

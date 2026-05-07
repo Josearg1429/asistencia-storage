@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Generador de Licencias — El Carmen v5 (ADMINISTRADOR)</title>
+<style>
+:root{--bg:#060d1a;--bg2:#0b1628;--card:#0f2040;--az:#0ea5e9;--az2:#0369a1;
+  --nj:#ea580c;--vd:#16a34a;--rj:#dc2626;--am:#d97706;
+  --t1:#e2e8f0;--t2:#94a3b8;--t3:#64748b;--border:rgba(14,165,233,.15);
+  --font:'Segoe UI',system-ui,sans-serif;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--t1);padding:24px 16px}
+.wrap{max-width:860px;margin:0 auto}
+h1{font-size:22px;font-weight:800;color:#fff;margin-bottom:4px}
+.sub{font-size:12px;color:var(--t3);margin-bottom:28px}
+.warn{background:rgba(220,38,38,.1);border:1px solid rgba(220,38,38,.3);border-left:4px solid var(--rj);
+  border-radius:10px;padding:12px 16px;font-size:12px;color:#f87171;margin-bottom:24px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;
+  padding:24px 26px;margin-bottom:16px}
+.card-title{font-size:15px;font-weight:800;color:#fff;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field label{display:block;font-size:10px;font-weight:700;color:var(--t2);
+  letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px}
+.field input,.field select{width:100%;padding:9px 13px;background:var(--bg2);
+  border:1px solid var(--border);border-radius:9px;color:var(--t1);
+  font-family:var(--font);font-size:13px;outline:none}
+.field input:focus,.field select:focus{border-color:var(--az)}
+.field select option{background:var(--bg2)}
+.btn-gen{background:linear-gradient(135deg,var(--az2),var(--az));color:#fff;
+  border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;
+  cursor:pointer;font-family:var(--font);margin-top:16px;width:100%}
+.btn-gen:hover{opacity:.9}
+.result{display:none;margin-top:20px}
+.lic-out{background:var(--bg);border:1px solid rgba(14,165,233,.3);border-radius:12px;
+  padding:16px 18px;font-family:'JetBrains Mono','Consolas',monospace;font-size:11px;
+  color:var(--az);word-break:break-all;letter-spacing:.3px;position:relative}
+.copy-btn{position:absolute;top:10px;right:10px;background:rgba(14,165,233,.15);
+  border:1px solid rgba(14,165,233,.3);border-radius:7px;padding:4px 10px;
+  font-size:11px;color:var(--az);cursor:pointer;font-family:var(--font)}
+.copy-btn:hover{background:rgba(14,165,233,.28)}
+.meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.m-item{background:rgba(0,0,0,.2);border-radius:8px;padding:8px 12px}
+.m-lbl{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px}
+.m-val{font-size:12px;font-weight:700;color:#fff}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:var(--bg2);padding:9px 12px;text-align:left;font-weight:700;color:var(--az);
+  font-size:10px;text-transform:uppercase;letter-spacing:.7px;border-bottom:1px solid var(--border)}
+td{padding:8px 12px;border-bottom:1px solid rgba(14,165,233,.07);vertical-align:middle}
+.mono{font-family:'JetBrains Mono','Consolas',monospace;font-size:10px;color:var(--az);word-break:break-all}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700}
+.b-pro{background:rgba(14,165,233,.12);color:#7dd3fc;border:1px solid rgba(14,165,233,.2)}
+.b-basic{background:rgba(217,119,6,.1);color:#fbbf24;border:1px solid rgba(217,119,6,.2)}
+#toast{position:fixed;top:20px;right:20px;z-index:99;display:flex;flex-direction:column;gap:8px}
+.t-ok{background:#0f3b1f;color:#4ade80;border:1px solid rgba(22,163,74,.35);
+  padding:10px 16px;border-radius:9px;font-size:12px;font-weight:700;
+  animation:tIn .3s ease;max-width:280px;box-shadow:0 4px 16px rgba(0,0,0,.4)}
+@keyframes tIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+<div class="wrap">
+<h1>&#128273; Generador de Licencias &mdash; El Carmen v5</h1>
+<div class="sub">Herramienta exclusiva del administrador del sistema</div>
+<div class="warn">
+  &#9888;&#65039; <strong>CONFIDENCIAL:</strong> Este archivo contiene la clave maestra del sistema.
+  No compartir con usuarios finales. Guardar en lugar seguro con acceso restringido.
+</div>
+
+<div class="card">
+  <div class="card-title">&#128221; Nueva licencia</div>
+  <div class="grid">
+    <div class="field"><label>Nombre de la institución</label>
+      <input type="text" id="gInst" placeholder="U.E. El Carmen" maxlength="40"></div>
+    <div class="field"><label>Correo del contacto</label>
+      <input type="email" id="gEmail" placeholder="admin@institucion.edu" maxlength="50"></div>
+    <div class="field"><label>Duración</label>
+      <select id="gDays">
+        <option value="365">1 año (365 días)</option>
+        <option value="730">2 años (730 días)</option>
+        <option value="180">6 meses (180 días)</option>
+        <option value="90">3 meses — Prueba (90 días)</option>
+      </select></div>
+    <div class="field"><label>Edición</label>
+      <select id="gEd">
+        <option value="PRO" selected>PRO</option>
+        <option value="BASIC">BASIC</option>
+        <option value="SCHOOL">SCHOOL</option>
+      </select></div>
+  </div>
+  <button class="btn-gen" onclick="generateLic()">&#9889; Generar clave de licencia</button>
+  <div class="result" id="genResult">
+    <div style="font-size:11px;color:var(--t3);margin-bottom:8px">Clave generada:</div>
+    <div class="lic-out" id="licOut"><button class="copy-btn" onclick="copyGen()">Copiar</button></div>
+    <div class="meta" id="licMeta"></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">&#128203; Licencias generadas en esta sesión</div>
+  <div style="overflow-x:auto">
+  <table>
+    <thead><tr><th>Institución</th><th>Edición</th><th>Emitida</th><th>Expira</th><th>Serial</th><th>Clave</th></tr></thead>
+    <tbody id="logTable">
+      <tr>
+        <td>U.E. El Carmen</td>
+        <td><span class="badge b-pro">PRO</span></td>
+        <td>2026-05-07</td>
+        <td>2027-05-07</td>
+        <td style="font-family:monospace;font-size:10px;color:var(--az)">FD3ABB7D</td>
+        <td><span class="mono" title="EC5-eyJpIjoiVS5FLiBFbCBDYXJtZW4iLCJlIjoiYWRtaW5AZWxjYXJtZW4uZWR1LnZlIiwiZCI6IlBSTyIsInMiOjE3NzgxODI3MjIsIngiOjE4MDk3MTg3MjIsIm4iOiJGRDNBQkI3RCJ9.IhHiktabtt4z54-XFe0X6w">EC5-eyJpIjoiVS5FLiBFbCBDYXJtZW4i...</span></td>
+      </tr>
+      <tr>
+        <td>C.E.I. Los Pinos</td>
+        <td><span class="badge b-pro">PRO</span></td>
+        <td>2026-05-07</td>
+        <td>2027-05-07</td>
+        <td style="font-family:monospace;font-size:10px;color:var(--az)">4262AD8D</td>
+        <td><span class="mono" title="EC5-eyJpIjoiQy5FLkkuIExvcyBQaW5vcyIsImUiOiJkaXJlY2Npb25AbG9zcGlub3MuZWR1IiwiZCI6IlBSTyIsInMiOjE3NzgxODI3MjIsIngiOjE4MDk3MTg3MjIsIm4iOiI0MjYyQUQ4RCJ9.8nwETiXeYqmHcGhv8_bzjg">EC5-eyJpIjoiQy5FLkkuIExvcyBQaW5v...</span></td>
+      </tr>
+      <tr>
+        <td>Liceo Bolívar</td>
+        <td><span class="badge b-basic">BASIC</span></td>
+        <td>2026-05-07</td>
+        <td>2026-11-03</td>
+        <td style="font-family:monospace;font-size:10px;color:var(--az)">DA2559AE</td>
+        <td><span class="mono" title="EC5-eyJpIjoiTGljZW8gQm9sXHUwMGVkdmFyIiwiZSI6ImNvbnRyb2xAYm9saXZhci5lZHUudmUiLCJkIjoiQkFTSUMiLCJzIjoxNzc4MTgyNzIyLCJ4IjoxNzkzNzM0NzIyLCJuIjoiREEyNTU5QUUifQ.ORl9qvfWZo8yfwDOLPjO2Q">EC5-eyJpIjoiTGljZW8gQm9sXHUwMGVk...</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+</div>
+
+<script>
+const MASTER_KEY_RAW = "EC5-MASTER-7f3a9b2e-4c8d-11ef-a1b2-0242ac130003";
+
+async function importHmacKey(s){
+  return crypto.subtle.importKey('raw',new TextEncoder().encode(s),
+    {name:'HMAC',hash:'SHA-256'},false,['sign']);
+}
+async function hmacSign(key,data){
+  const sig=await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(data));
+  return new Uint8Array(sig).slice(0,16);
+}
+function b64ue(bytes){
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function b64uj(obj){
+  return btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(obj)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+async function generateLic(){
+  const inst=(document.getElementById('gInst').value.trim()||'').slice(0,40);
+  const email=(document.getElementById('gEmail').value.trim()||'').slice(0,50);
+  if(!inst||!email){alert('Ingrese institución y correo');return;}
+  const days=parseInt(document.getElementById('gDays').value);
+  const ed=document.getElementById('gEd').value;
+  const now=Math.floor(Date.now()/1000);
+  const exp=now+days*86400;
+  const serial=(Math.random().toString(16).slice(2,10)).toUpperCase();
+  const payload={i:inst,e:email,d:ed,s:now,x:exp,n:serial};
+  const pb=b64uj(payload);
+  const mk=await importHmacKey(MASTER_KEY_RAW);
+  const sig=await hmacSign(mk,pb);
+  const sb=b64ue(sig);
+  const key='EC5-'+pb+'.'+sb;
+  const issued=new Date(now*1000).toLocaleDateString('es-ES');
+  const expiry=new Date(exp*1000).toLocaleDateString('es-ES');
+
+  document.getElementById('licOut').childNodes[0].textContent=key;
+  document.getElementById('licOut').childNodes[0].nodeValue=key;
+
+  // update output
+  const out=document.getElementById('licOut');
+  out.innerHTML='<button class="copy-btn" onclick="copyGen()">Copiar</button>';
+  out.insertBefore(document.createTextNode(key),out.firstChild);
+
+  document.getElementById('licMeta').innerHTML=
+    mItem('Institución',inst)+mItem('Edición',ed)+
+    mItem('Emitida',issued)+mItem('Expira',expiry)+
+    mItem('Días',days)+mItem('Serial',serial);
+
+  document.getElementById('genResult').style.display='block';
+
+  // Agregar al log
+  const tr=document.createElement('tr');
+  tr.innerHTML='<td>'+inst+'</td>'+
+    '<td><span class="badge '+(ed==='PRO'?'b-pro':'b-basic')+'">'+ed+'</span></td>'+
+    '<td>'+issued+'</td><td>'+expiry+'</td>'+
+    '<td style="font-family:monospace;font-size:10px;color:var(--az)">'+serial+'</td>'+
+    '<td><span class="mono" title="'+key+'">'+key.slice(0,30)+'...</span></td>';
+  document.getElementById('logTable').insertBefore(tr,document.getElementById('logTable').firstChild);
+
+  toast('Licencia generada para '+inst);
+}
+
+function mItem(l,v){
+  return '<div class="m-item"><div class="m-lbl">'+l+'</div><div class="m-val">'+v+'</div></div>';
+}
+
+function copyGen(){
+  const txt=document.getElementById('licOut').childNodes[0].textContent||
+            document.getElementById('licOut').firstChild.nodeValue||'';
+  const raw=txt.replace('Copiar','').trim();
+  navigator.clipboard.writeText(raw).then(()=>toast('Clave copiada al portapapeles'));
+}
+
+function toast(msg){
+  const el=document.createElement('div');el.className='t-ok';el.textContent=msg;
+  document.getElementById('toast').appendChild(el);
+  setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity .3s';setTimeout(()=>el.remove(),300);},3000);
+}
+</script>
+</body>
+</html>

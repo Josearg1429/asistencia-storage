@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\newta\\\\OneDrive\\\\Documentos\\\\portafolio digital \\(1\\)\\\\portafolio digital\\\\app_con_storage\" -Recurse -Force)",
+      "Bash(Select-Object FullName, PSIsContainer)",
+      "Bash(Sort-Object FullName)",
+      "Bash(Format-Table -AutoSize)",
+      "PowerShell($scriptFile = \"C:\\\\Users\\\\newta\\\\OneDrive\\\\Documentos\\\\portafolio digital \\(1\\)\\\\portafolio digital\\\\app_con_storage\\\\script.js\"; \\(Get-Content $scriptFile\\).Count)"
+    ]
+  }
+}
