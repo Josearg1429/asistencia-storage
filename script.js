@@ -105,7 +105,7 @@ async function guardarSesion() {
       estado:   EC.jornadaEstado,
       retardos: EC.histRetardos,
       // Solo id+hora+tipo — 80% menos memoria que guardar nombres
-      regs: EC.registros.map(r => ({i:r.id, h:r.hora, t:r.tipo, tar:r.tardio||false, f:r.fecha})),
+      regs: EC.registros.map(r => ({i:r.id, h:r.hora, t:r.tipo, tar:r.tardio||false, f:r.fecha, ap:r.apellido, nm:r.nombre, nr:r.nro})),
       alumnos: EC.alumnos.length ? EC.alumnos : undefined,
     };
     const enc = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
@@ -563,16 +563,22 @@ async function restaurarSesion() {
   // Restaurar lista de alumnos si no está cargada (p.ej. al reabrir el navegador)
   if(!EC.alumnos.length && s.alumnos?.length) {
     EC.alumnos = s.alumnos;
-    renderListas();
     toast('📋 Lista de alumnos recuperada desde sesión guardada', 'info', 4000);
   }
 
-  // Cruzar IDs guardados con la lista maestra cargada
+  // Restaurar registros — funciona aunque EC.alumnos esté vacío usando los nombres
+  // guardados en cada reg (campos ap/nm). Retrocompatible con el formato anterior.
   EC.registros = [];
-  if(s.regs && EC.alumnos.length) {
+  if(s.regs?.length) {
+    const fechaFallback = new Date().toLocaleDateString('es-VE',{timeZone:'America/Caracas'});
     s.regs.forEach(r => {
       const a = EC.alumnos.find(x=>x.id===r.i);
-      if(a) EC.registros.push({...a, hora:r.h, tipo:r.t, tardio:r.tar||false, fecha:r.f||new Date().toLocaleDateString('es-VE',{timeZone:'America/Caracas'})});
+      if(a) {
+        EC.registros.push({...a, hora:r.h, tipo:r.t, tardio:r.tar||false, fecha:r.f||fechaFallback});
+      } else if(r.ap) {
+        // Fallback: datos de nombre guardados dentro del propio registro
+        EC.registros.push({id:r.i, nro:r.nr||0, apellido:r.ap, nombre:r.nm||'', grado:'?', seccion:'?', hora:r.h, tipo:r.t, tardio:r.tar||false, fecha:r.f||fechaFallback});
+      }
     });
   }
   if(s.retardos) Object.assign(EC.histRetardos, s.retardos);
@@ -582,6 +588,7 @@ async function restaurarSesion() {
   actualizarBannerJornada();
   iniciarScanner();
   actualizarTodo();
+  guardarSesion(); // actualiza localStorage al nuevo formato con ap/nm/alumnos
   toast(`✅ Sesión restaurada · ${EC.registros.length} registros recuperados`, 'ok', 5000);
   audit(`Sesión restaurada: ${EC.registros.length} registros`, 'OK');
   window._sesionPendiente = null;
