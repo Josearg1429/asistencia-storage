@@ -1,0 +1,4 @@
+# Artefactos de build — no versionar
+installer/Output/
+installer/assets/servidor.exe
+android/app/src/main/assets/
