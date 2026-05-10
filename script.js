@@ -96,17 +96,34 @@ document.addEventListener('keydown', e => { if(e.ctrlKey && e.shiftKey && e.key=
 const LS_KEY   = 'ec5_jornada';
 const LS_LISTA = 'ec5_lista';   // persiste todo el año escolar
 
+/* ── Almacenamiento seguro ─────────────────────────────────────────────
+   En Android (APK): usa window.AndroidStorage — cifrado AES-256-GCM
+   via EncryptedSharedPreferences (Kotlin bridge).
+   En navegador web: usa localStorage como siempre.
+   El wrapper normaliza getItem para que devuelva null (no "null" string).
+   ──────────────────────────────────────────────────────────────────── */
+const Store = (() => {
+  if (typeof window !== 'undefined' && window.AndroidStorage) {
+    return {
+      setItem:    (k, v) => window.AndroidStorage.setItem(String(k), String(v)),
+      getItem:    (k)    => { const v = window.AndroidStorage.getItem(String(k)); return (v === 'null' || v == null) ? null : v; },
+      removeItem: (k)    => window.AndroidStorage.removeItem(String(k)),
+    };
+  }
+  return localStorage;
+})();
+
 function guardarLista() {
   try {
     if(!EC.alumnos.length) return;
     const payload = { alumnos: EC.alumnos, fecha: new Date().toLocaleDateString('es-VE',{timeZone:'America/Caracas'}) };
-    localStorage.setItem(LS_LISTA, JSON.stringify(payload));
+    Store.setItem(LS_LISTA, JSON.stringify(payload));
   } catch(e) { /* QuotaExceeded */ }
 }
 
 function cargarListaGuardada() {
   try {
-    const raw = localStorage.getItem(LS_LISTA);
+    const raw = Store.getItem(LS_LISTA);
     return raw ? JSON.parse(raw) : null;
   } catch(e) { return null; }
 }
@@ -126,21 +143,21 @@ async function guardarSesion() {
     };
     const enc = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
     const cs  = btoa(String(enc.length)); // checksum
-    localStorage.setItem(LS_KEY, JSON.stringify({d:enc, cs}));
+    Store.setItem(LS_KEY, JSON.stringify({d:enc, cs}));
     actualizarStatusBar();
   } catch(e) { /* QuotaExceeded — continuar sin persistencia */ }
 }
 
 async function cargarSesion() {
   try {
-    const raw = localStorage.getItem(LS_KEY);
+    const raw = Store.getItem(LS_KEY);
     if(!raw) return null;
     const obj = JSON.parse(raw);
     // Validar checksum — detecta manipulación por consola del navegador
     if(btoa(String(obj.d.length)) !== obj.cs) {
       toast('⚠️ Sesión corrompida detectada — datos restaurados a estado íntegro', 'warn', 6000);
       audit('CHECKSUM INVÁLIDO — posible manipulación de localStorage', 'ERROR');
-      localStorage.removeItem(LS_KEY);
+      Store.removeItem(LS_KEY);
       return null;
     }
     return JSON.parse(decodeURIComponent(escape(atob(obj.d))));
@@ -151,7 +168,7 @@ async function cargarSesion() {
 }
 
 function actualizarStatusBar() {
-  const bytes = new Blob([localStorage.getItem(LS_KEY)||'']).size;
+  const bytes = new Blob([Store.getItem(LS_KEY)||'']).size;
   const set = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
   set('sbStore', 'LS: ' + (bytes/1024).toFixed(1) + 'KB');
   set('sbProf',  EC.profName || '—');
@@ -430,7 +447,7 @@ function cambiarLista() {
   const n = EC.alumnos.length;
   if(n && !confirm(`⚠️ ¿Cambiar la lista del plantel?\n\nSe eliminarán los ${n} alumnos actuales y deberás cargar el Excel del nuevo año o sección.\n\nLos registros de asistencia del día no se pierden.`)) return;
   EC.alumnos = [];
-  localStorage.removeItem(LS_LISTA);
+  Store.removeItem(LS_LISTA);
   document.getElementById('excelPreview')?.classList.add('hidden');
   const uz = document.getElementById('uploadZone'); if(uz) uz.style.display='';
   const qs = document.getElementById('qrSection'); if(qs) qs.classList.add('hidden');
@@ -620,7 +637,7 @@ async function restaurarSesion() {
 
 async function descartarSesion() {
   cerrarModal('mRestore');
-  localStorage.removeItem(LS_KEY);
+  Store.removeItem(LS_KEY);
   EC.registros = []; EC.jornadaEstado = 'activa';
   actualizarBannerJornada();
   iniciarScanner();
@@ -638,7 +655,7 @@ async function confirmarCierreSesion() {
   if(!ok) return;
   await exportarExcelFinal();
   EC.registros=[]; EC.jornadaEstado='idle'; EC.profName='';
-  localStorage.removeItem(LS_KEY);
+  Store.removeItem(LS_KEY);
   detenerScanner();
   document.getElementById('loginBox')?.classList.remove('hidden');
   document.getElementById('scannerBox')?.classList.add('hidden');

@@ -9,17 +9,20 @@
   <meta name="theme-color" content="#060d1a">
   <meta name="apple-mobile-web-app-title" content="El Carmen v5">
   <title>Sistema El Carmen v5 — Jornada Escolar</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- Librerías locales — sin dependencias de CDN externo (requerido para APK Android) -->
+  <script src="libs/qrcode.min.js"></script>
+  <script src="libs/xlsx.full.min.js"></script>
+  <script src="libs/html5-qrcode.min.js"></script>
+  <script src="libs/pptxgen.bundle.js"></script>
+  <script src="libs/jspdf.umd.min.js"></script>
   <link rel="stylesheet" href="styles.css">
   <script>
-    /* Bootstrap de tema — se ejecuta antes del render para evitar flash */
+    /* Bootstrap de tema — usa AndroidStorage en APK o localStorage en web */
     (function(){
       try {
-        var t = localStorage.getItem('elcarmen_theme') || 'original';
+        var _s = (window.AndroidStorage) ? window.AndroidStorage : localStorage;
+        var t  = _s.getItem('elcarmen_theme');
+        if (t === 'null' || !t) t = 'original';
         if (t !== 'original') document.documentElement.setAttribute('data-theme', t);
       } catch(e) {}
     })();
@@ -454,7 +457,7 @@
   function setTheme(t) {
     if (t === 'original') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', t);
-    try { localStorage.setItem('elcarmen_theme', t); } catch(e) {}
+    try { (window.Store || localStorage).setItem('elcarmen_theme', t); } catch(e) {}
   }
   /* Sincronizar el dropdown con el tema cargado al inicio */
   (function(){
