@@ -28,3 +28,12 @@
 # AndroidX Security Crypto
 -keep class androidx.security.crypto.** { *; }
 -keep class com.google.crypto.tink.** { *; }
+
+# Dependencias opcionales de Tink no incluidas en el APK (solo se usan en entornos server-side)
+# R8 las reporta como "missing" pero no se invocan en runtime en Android
+-dontwarn com.google.api.client.http.**
+-dontwarn javax.annotation.**
+-dontwarn javax.annotation.concurrent.**
+-dontwarn org.joda.time.**
+-dontwarn com.google.errorprone.annotations.**
+-dontwarn com.google.j2objc.annotations.**

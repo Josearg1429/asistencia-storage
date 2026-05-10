@@ -15,10 +15,20 @@ android {
         versionName = "5.0"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = rootProject.file("elcarmen-release.jks")
+            storePassword = "ElCarmen2025!"
+            keyAlias = "elcarmen"
+            keyPassword = "ElCarmen2025!"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
