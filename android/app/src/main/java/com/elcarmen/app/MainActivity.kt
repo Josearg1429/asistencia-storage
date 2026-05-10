@@ -3,6 +3,7 @@ package com.elcarmen.app
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.view.WindowManager
 import android.webkit.*
@@ -16,6 +17,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private lateinit var secureStorage: SecureStorage
 
+    // Callback pendiente del <input type="file"> del WebView
+    private var filePathCallback: ValueCallback<Array<Uri>>? = null
+
     // Solicitud de permiso de cámara para el escáner QR
     private val cameraPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -25,6 +29,15 @@ class MainActivity : AppCompatActivity() {
         } else {
             webView.evaluateJavascript("window._cameraPermissionGranted = false;", null)
         }
+    }
+
+    // Selector de archivos para subir la lista Excel
+    private val filePickerLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        val result = if (uri != null) arrayOf(uri) else null
+        filePathCallback?.onReceiveValue(result)
+        filePathCallback = null
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -59,7 +72,7 @@ class MainActivity : AppCompatActivity() {
             javaScriptEnabled = true
             domStorageEnabled = false          // Deshabilitado: se usa AndroidStorage (cifrado)
             allowFileAccess = true
-            allowContentAccess = false
+            allowContentAccess = true          // Necesario para leer el Uri del archivo seleccionado
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             cacheMode = WebSettings.LOAD_NO_CACHE
             setSupportZoom(false)
@@ -86,9 +99,31 @@ class MainActivity : AppCompatActivity() {
         }
 
         webView.webChromeClient = object : WebChromeClient() {
+
+            // ── Permiso de cámara para el escáner QR ─────────────────────
             override fun onPermissionRequest(request: PermissionRequest?) {
-                // Permitir acceso a cámara desde el WebView para el escáner QR
                 request?.grant(request.resources)
+            }
+
+            // ── Selector de archivos para <input type="file"> ─────────────
+            override fun onShowFileChooser(
+                webView: WebView?,
+                filePathCallback: ValueCallback<Array<Uri>>?,
+                fileChooserParams: FileChooserParams?
+            ): Boolean {
+                // Cancelar callback anterior si existe (evita leak)
+                this@MainActivity.filePathCallback?.onReceiveValue(null)
+                this@MainActivity.filePathCallback = filePathCallback
+
+                // Aceptar .xlsx, .xls y cualquier spreadsheet
+                val mimeTypes = arrayOf(
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
+                    "application/vnd.ms-excel",                                           // .xls
+                    "application/octet-stream",                                           // genérico
+                    "*/*"
+                )
+                filePickerLauncher.launch(mimeTypes)
+                return true
             }
         }
     }
