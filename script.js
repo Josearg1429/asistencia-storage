@@ -593,6 +593,7 @@ async function iniciarSesion() {
   EC.jornadaEstado = 'activa';
   actualizarBannerJornada();
   iniciarScanner();
+  actualizarContadores();
   actualizarStatusBar();
   renderListas(); renderTablaGlobal(); renderDashboard();
   audit(`Sesión iniciada: ${EC.profName}`, 'OK');
@@ -894,9 +895,6 @@ function renderListas() {
       <span style="font-size:10px;color:var(--t3);min-width:22px;font-family:var(--mono);">${String(a.nro).padStart(2,'0')}</span>
       <span style="flex:1;font-size:11px;">${sanitize(a.apellido)}, ${sanitize(a.nombre)}</span>
     </div>`).join('');
-  document.getElementById('badgePend')?.setAttribute('',pend.length)||
-    (document.getElementById('badgePend')&&(document.getElementById('badgePend').textContent=pend.length));
-
   const lpres=document.getElementById('listaPres');
   if(lpres) lpres.innerHTML=pres.map(r=>`
     <div class="li-item ${r.tardio?'tard':'pres'}">
@@ -1595,8 +1593,10 @@ function showPage(name) {
   const tb=document.getElementById('tab-'+name);
   if(pg) pg.classList.add('active');
   if(tb) tb.classList.add('active');
-  // Detener escáner al salir del lector
+  // Detener escáner al salir del lector; reiniciarlo al volver
   if(name!=='lector' && EC.scanActivo) detenerScanner();
+  if(name==='lector' && EC.jornadaEstado==='activa' && !EC.scanActivo) iniciarScanner();
+  if(name==='lector') actualizarContadores();
   // Renderizar la página correcta
   if(name==='registro') { renderTablaGlobal(); actualizarContadores(); }
   if(name==='dashboard') renderDashboard();
@@ -1633,6 +1633,26 @@ function cerrarModal(id) {
   // Restaurar historial de retardos si existe sesión previa
   const sesGuardada = await cargarSesion();
   if(sesGuardada?.retardos) Object.assign(EC.histRetardos, sesGuardada.retardos);
+
+  // Fallback: si LS_LISTA estaba vacío pero la sesión guardada tiene alumnos, recuperarlos
+  if(!EC.alumnos.length && sesGuardada?.alumnos?.length) {
+    EC.alumnos = sesGuardada.alumnos;
+    EC.alumnos.forEach(a => { if(EC.histRetardos[a.id]===undefined) EC.histRetardos[a.id]=0; });
+    guardarLista(); // repoblar LS_LISTA para futuras sesiones
+    const em = document.getElementById('excelMsg');
+    if(em) em.textContent = `📋 Lista recuperada · ${EC.alumnos.length} alumnos · ${sesGuardada.fecha||'sesión anterior'}`;
+    document.getElementById('excelPreview')?.classList.remove('hidden');
+    document.getElementById('uploadZone')?.style.setProperty('display','none');
+    renderPreviewExcel();
+    renderTablaGlobal(); actualizarContadores();
+    audit(`Lista recuperada desde sesión: ${EC.alumnos.length} alumnos`, 'OK');
+  }
+
+  // Reiniciar cámara automáticamente si el usuario cambia de pestaña y vuelve
+  document.addEventListener('visibilitychange', () => {
+    if(!document.hidden && EC.jornadaEstado==='activa' && !EC.scanActivo) iniciarScanner();
+  });
+
   // Inicializar status bar con fecha actual
   actualizarStatusBar();
   const sbF=document.getElementById('sbFecha');
