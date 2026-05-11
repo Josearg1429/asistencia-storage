@@ -98,6 +98,25 @@ td{padding:8px 12px;border-bottom:1px solid rgba(14,165,233,.07);vertical-align:
 </div>
 
 <div class="card">
+  <div class="card-title">&#128273; Clave de Activación — 16 hex (producto)</div>
+  <p style="font-size:12px;color:var(--t2);margin-bottom:16px;">
+    Genera una clave corta de activación de <strong style="color:#fff;">16 caracteres hexadecimales</strong>
+    (formato XXXX-XXXX-XXXX-XXXX). El sistema la valida sin internet usando HMAC-SHA256.
+  </p>
+  <div class="field" style="max-width:320px;">
+    <label>Identificador / Institución (opcional)</label>
+    <input type="text" id="k16Inst" placeholder="U.E. El Carmen" maxlength="40">
+  </div>
+  <button class="btn-gen" style="max-width:320px;" onclick="generateKey16()">&#9889; Generar clave 16-hex</button>
+  <div class="result" id="result16">
+    <div style="font-size:11px;color:var(--t3);margin-bottom:8px;">Clave de activación:</div>
+    <div class="lic-out" id="out16" style="font-size:26px;letter-spacing:6px;text-align:center;padding:22px;">
+      <button class="copy-btn" onclick="copy16()">Copiar</button>
+    </div>
+  </div>
+</div>
+
+<div class="card">
   <div class="card-title">&#128203; Licencias generadas en esta sesión</div>
   <div style="overflow-x:auto">
   <table>
@@ -149,6 +168,31 @@ function b64ue(bytes){
 }
 function b64uj(obj){
   return btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(obj)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+async function generateKey16(){
+  const inst = document.getElementById('k16Inst').value.trim() || 'Sin identificador';
+  // 8 hex aleatorios (dato)
+  const arr  = new Uint8Array(4);
+  crypto.getRandomValues(arr);
+  const data = Array.from(arr).map(b=>b.toString(16).padStart(2,'0')).join('');
+  // HMAC-SHA256(master, dato) → tomar primeros 4 bytes → 8 hex (checksum)
+  const k    = await importHmacKey(MASTER_KEY_RAW);
+  const sig  = await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(data));
+  const check= Array.from(new Uint8Array(sig)).slice(0,4).map(b=>b.toString(16).padStart(2,'0')).join('');
+  const hex16= (data + check).toUpperCase();
+  // Formatear como XXXX-XXXX-XXXX-XXXX
+  const fmt  = hex16.match(/.{1,4}/g).join('-');
+  const out  = document.getElementById('out16');
+  out.innerHTML = '<button class="copy-btn" onclick="copy16()">Copiar</button>';
+  out.insertBefore(document.createTextNode(fmt), out.firstChild);
+  document.getElementById('result16').style.display = 'block';
+  toast('Clave 16-hex generada para: ' + inst);
+}
+
+function copy16(){
+  const txt = document.getElementById('out16').childNodes[0]?.textContent?.trim() || '';
+  navigator.clipboard.writeText(txt).then(()=>toast('Clave copiada al portapapeles'));
 }
 
 async function generateLic(){

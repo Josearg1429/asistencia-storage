@@ -95,6 +95,7 @@ document.addEventListener('keydown', e => { if(e.ctrlKey && e.shiftKey && e.key=
    ══════════════════════════════════════════════ */
 const LS_KEY   = 'ec5_jornada';
 const LS_LISTA = 'ec5_lista';   // persiste todo el año escolar
+const LS_LIC   = 'ec5_lic';     // licencia de producto (16 hex)
 
 /* ── Almacenamiento seguro ─────────────────────────────────────────────
    En Android (APK): usa window.AndroidStorage — cifrado AES-256-GCM
@@ -112,6 +113,56 @@ const Store = (() => {
   }
   return localStorage;
 })();
+
+/* ══════════════════════════════════════════════
+   LICENCIA DE PRODUCTO — 16 hex (HMAC-SHA256)
+   Formato: AAAA-BBBB-CCCC-DDDD
+   Primeros 8 hex = dato aleatorio
+   Últimos 8 hex  = HMAC(master, dato)[0:4].hex()
+   Verificación offline, sin servidor externo.
+   ══════════════════════════════════════════════ */
+const _LIC_MASTER = 'EC5-MASTER-7f3a9b2e-4c8d-11ef-a1b2-0242ac130003';
+
+async function validarLicencia16(raw) {
+  const hex = raw.replace(/[^0-9a-fA-F]/g,'').toLowerCase();
+  if(hex.length !== 16) return false;
+  const data  = hex.slice(0, 8);
+  const check = hex.slice(8);
+  try {
+    const k   = await crypto.subtle.importKey('raw', new TextEncoder().encode(_LIC_MASTER),
+                  {name:'HMAC', hash:'SHA-256'}, false, ['sign']);
+    const sig = await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(data));
+    const computed = Array.from(new Uint8Array(sig)).slice(0,4)
+                       .map(b=>b.toString(16).padStart(2,'0')).join('');
+    return computed === check;
+  } catch(e) { return false; }
+}
+
+function formatLicInput(el) {
+  const raw = el.value.replace(/[^0-9a-fA-F]/g,'').toUpperCase().slice(0,16);
+  el.value  = raw.match(/.{1,4}/g)?.join('-') || raw;
+  document.getElementById('licError').style.display = 'none';
+}
+
+async function activarLicencia() {
+  const raw    = (document.getElementById('inpLicencia')?.value||'').replace(/[^0-9a-fA-F]/g,'').toLowerCase();
+  const errEl  = document.getElementById('licError');
+  if(raw.length !== 16) {
+    if(errEl){ errEl.textContent='⚠️ Ingresa los 16 caracteres completos.'; errEl.style.display='block'; }
+    return;
+  }
+  const valido = await validarLicencia16(raw);
+  if(!valido) {
+    if(errEl){ errEl.textContent='❌ Clave inválida. Verifica el código o contacta al administrador.'; errEl.style.display='block'; }
+    audit('Intento de activación con licencia inválida','WARN');
+    return;
+  }
+  Store.setItem(LS_LIC, raw);
+  document.getElementById('mLicense')?.classList.add('hidden');
+  toast('✅ Producto activado correctamente','ok',4000);
+  audit('Licencia de producto activada','OK');
+  await _continuarInit();
+}
 
 function guardarLista() {
   try {
@@ -1610,7 +1661,7 @@ function cerrarModal(id) {
 /* ══════════════════════════════════════════════
    MÓDULO 27: INIT async — arranque del sistema
    ══════════════════════════════════════════════ */
-(async function init() {
+async function _continuarInit() {
   // Detectar HTTPS
   const noHttps = location.protocol!=='https:' && location.hostname!=='localhost' && location.hostname!=='127.0.0.1';
   if(noHttps) {
@@ -1638,7 +1689,7 @@ function cerrarModal(id) {
   if(!EC.alumnos.length && sesGuardada?.alumnos?.length) {
     EC.alumnos = sesGuardada.alumnos;
     EC.alumnos.forEach(a => { if(EC.histRetardos[a.id]===undefined) EC.histRetardos[a.id]=0; });
-    guardarLista(); // repoblar LS_LISTA para futuras sesiones
+    guardarLista();
     const em = document.getElementById('excelMsg');
     if(em) em.textContent = `📋 Lista recuperada · ${EC.alumnos.length} alumnos · ${sesGuardada.fecha||'sesión anterior'}`;
     document.getElementById('excelPreview')?.classList.remove('hidden');
@@ -1658,4 +1709,17 @@ function cerrarModal(id) {
   const sbF=document.getElementById('sbFecha');
   if(sbF) sbF.textContent = '';
   audit('Sistema El Carmen v5 iniciado', 'INFO');
+}
+
+(async function init() {
+  // 1. Verificar licencia de producto antes de cualquier otra cosa
+  const licGuardada = Store.getItem(LS_LIC);
+  const licValida   = licGuardada ? await validarLicencia16(licGuardada) : false;
+  if(!licValida) {
+    if(licGuardada) Store.removeItem(LS_LIC); // limpiar licencia corrupta/manipulada
+    document.getElementById('mLicense')?.classList.remove('hidden');
+    return; // Bloquear arranque hasta que se active la licencia
+  }
+  // 2. Licencia válida — continuar arranque normal
+  await _continuarInit();
 })();

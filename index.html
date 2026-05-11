@@ -36,6 +36,32 @@
 <!-- FAB Emergencia flotante -->
 <button class="fab-emerg" onclick="recuentoEmergencia()" title="Recuento de emergencia">🆘</button>
 
+<!-- ═══ PANTALLA: ACTIVACIÓN DE LICENCIA ═══ -->
+<div class="modal-overlay hidden" id="mLicense" style="z-index:9999;background:rgba(6,13,26,.97);">
+  <div class="modal-box" style="max-width:400px;text-align:center;">
+    <div style="font-size:42px;margin-bottom:10px;">🔑</div>
+    <div class="modal-title" style="font-size:17px;">Activar Producto</div>
+    <div class="modal-body" style="margin-bottom:18px;">
+      <strong style="color:#fff;">Sistema El Carmen v5</strong> requiere una licencia de producto activa en este dispositivo.<br><br>
+      Ingresa la clave de 16 caracteres proporcionada por el administrador.
+    </div>
+    <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;text-align:left;">Clave de licencia</label>
+    <input type="text" id="inpLicencia"
+      style="width:100%;padding:14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+             color:var(--az);font-family:var(--mono);font-size:20px;letter-spacing:4px;text-align:center;
+             text-transform:uppercase;outline:none;margin-bottom:8px;"
+      maxlength="19" placeholder="XXXX-XXXX-XXXX-XXXX"
+      oninput="formatLicInput(this)"
+      onkeydown="if(event.key==='Enter')activarLicencia()"
+      autocomplete="off" spellcheck="false">
+    <div id="licError" style="display:none;color:#f87171;font-size:11px;margin-bottom:10px;"></div>
+    <button class="btn btn-prim" style="width:100%;padding:13px;font-size:14px;" onclick="activarLicencia()">
+      🔑 Activar producto
+    </button>
+    <p style="font-size:10px;color:var(--t3);margin-top:14px;">¿No tienes una clave? Contacta al administrador del sistema.</p>
+  </div>
+</div>
+
 <!-- ═══ MODAL: CONSENTIMIENTO LOPNNA ═══ -->
 <div class="modal-overlay" id="mConsent">
   <div class="modal-box">
