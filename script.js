@@ -422,6 +422,10 @@ function procesarExcel(rawData, map) {
   guardarLista();
   toast(`✅ ${EC.alumnos.length} alumnos cargados correctamente`, 'ok');
   audit(`Excel cargado: ${EC.alumnos.length} alumnos`, 'OK');
+
+  // Si la sesión ya está activa y el escáner no arrancó (por falta de lista), iniciarlo ahora
+  const alSin = document.getElementById('alertSinLista'); if(alSin) alSin.style.display='none';
+  if(EC.jornadaEstado === 'activa' && !EC.scanActivo) iniciarScanner();
 }
 
 function renderPreviewExcel() {
@@ -697,6 +701,11 @@ function modSuplente() {
    ══════════════════════════════════════════════ */
 function iniciarScanner() {
   if(EC.scanActivo) return;
+  if(!EC.alumnos.length) {
+    const sr = document.getElementById('scanResult');
+    if(sr) sr.innerHTML = '<div class="alert al-warn">⚠️ Carga la lista de alumnos para activar el escáner</div>';
+    return;
+  }
   EC.qr5 = new Html5Qrcode('reader');
   EC.qr5.start(
     {facingMode:'environment'},

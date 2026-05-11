@@ -63,14 +63,14 @@ class MainActivity : AppCompatActivity() {
         webView = findViewById(R.id.webView)
 
         configurarWebView()
-        webView.loadUrl("file:///android_asset/index.html")
+        webView.loadUrl("https://stalwart-panda-4f910f.netlify.app")
     }
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun configurarWebView() {
         webView.settings.apply {
             javaScriptEnabled = true
-            domStorageEnabled = false          // Deshabilitado: se usa AndroidStorage (cifrado)
+            domStorageEnabled = true
             allowFileAccess = true
             allowContentAccess = true          // Necesario para leer el Uri del archivo seleccionado
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
@@ -92,9 +92,8 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                // Bloquear navegación externa — solo file:///android_asset/
                 val url = request?.url?.toString() ?: return true
-                return !url.startsWith("file:///android_asset/")
+                return !url.startsWith("https://stalwart-panda-4f910f.netlify.app")
             }
         }
 

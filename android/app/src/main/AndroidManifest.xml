@@ -3,7 +3,8 @@
 
     <!-- Cámara para escáner QR -->
     <uses-permission android:name="android.permission.CAMERA" />
-    <!-- Sin permiso de internet en producción — todas las libs son locales -->
+    <!-- Conexión a Netlify para cargar la app actualizada -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
