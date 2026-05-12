@@ -123,20 +123,34 @@ const Store = (() => {
    ══════════════════════════════════════════════ */
 const _LIC_MASTER = 'EC5-MASTER-7f3a9b2e-4c8d-11ef-a1b2-0242ac130003';
 
-/** Obtiene el ID del dispositivo: Android ID en APK, UUID persistente en web. */
+/**
+ * Obtiene el ID del dispositivo según la plataforma:
+ *   Android APK  → Android ID via bridge window.AndroidStorage.getDeviceId()
+ *   Desktop Win  → MAC address de 12 hex pasada por launch.vbs como ?hwid=
+ *   Web browser  → UUID persistente en localStorage (fallback)
+ */
 async function getDeviceId() {
+  // 1. Android: Android ID desde el bridge Kotlin
   if(typeof window.AndroidStorage?.getDeviceId === 'function') {
     const id = window.AndroidStorage.getDeviceId();
     if(id) return id;
   }
-  // Fallback web: UUID persistente en localStorage
-  let wid = localStorage.getItem('ec5_device_id');
-  if(!wid) {
-    const b = crypto.getRandomValues(new Uint8Array(16));
-    wid = Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join('');
-    localStorage.setItem('ec5_device_id', wid);
+  // 2. Desktop Windows: MAC address inyectada por launch.vbs via ?hwid=MACADDR
+  const params = new URLSearchParams(location.search);
+  const hwid   = params.get('hwid');
+  if(hwid && /^[0-9a-fA-F]{12}$/.test(hwid)) {
+    // Guardar en localStorage para que persista aunque la URL cambie en la sesión
+    localStorage.setItem('ec5_device_id', hwid.toLowerCase());
+    return hwid.toLowerCase();
   }
-  return wid;
+  // 3. Fallback: ID almacenado (desktop ya identificado antes, o web)
+  const stored = localStorage.getItem('ec5_device_id');
+  if(stored) return stored;
+  // 4. Último recurso web: generar UUID y persistirlo
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  const uuid = Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join('');
+  localStorage.setItem('ec5_device_id', uuid);
+  return uuid;
 }
 
 /** Calcula los primeros 8 hex que corresponden a este dispositivo. */
