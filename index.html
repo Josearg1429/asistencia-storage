@@ -38,14 +38,29 @@
 
 <!-- ═══ PANTALLA: ACTIVACIÓN DE LICENCIA ═══ -->
 <div class="modal-overlay hidden" id="mLicense" style="z-index:9999;background:rgba(6,13,26,.97);">
-  <div class="modal-box" style="max-width:400px;text-align:center;">
+  <div class="modal-box" style="max-width:420px;text-align:center;">
     <div style="font-size:42px;margin-bottom:10px;">🔑</div>
     <div class="modal-title" style="font-size:17px;">Activar Producto</div>
-    <div class="modal-body" style="margin-bottom:18px;">
-      <strong style="color:#fff;">Sistema El Carmen v5</strong> requiere una licencia de producto activa en este dispositivo.<br><br>
-      Ingresa la clave de 16 caracteres proporcionada por el administrador.
+    <div class="modal-body" style="margin-bottom:16px;">
+      <strong style="color:#fff;">Sistema El Carmen v5</strong> requiere una licencia activa.<br>
+      Proporciona el <strong style="color:var(--az);">ID de dispositivo</strong> al administrador para obtener tu clave.
     </div>
-    <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;text-align:left;">Clave de licencia</label>
+
+    <!-- ID del dispositivo -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:16px;">
+      <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">ID de dispositivo</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <code id="dispDeviceId" style="flex:1;font-family:var(--mono);font-size:12px;color:var(--az);word-break:break-all;text-align:left;">Cargando...</code>
+        <button onclick="navigator.clipboard.writeText(document.getElementById('dispDeviceId').textContent).then(()=>this.textContent='✓').catch(()=>{})"
+          style="flex-shrink:0;background:rgba(14,165,233,.15);border:1px solid rgba(14,165,233,.3);
+                 border-radius:7px;padding:5px 10px;font-size:11px;color:var(--az);cursor:pointer;">
+          📋 Copiar
+        </button>
+      </div>
+    </div>
+
+    <!-- Input clave -->
+    <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;text-align:left;">Clave de licencia (16 caracteres)</label>
     <input type="text" id="inpLicencia"
       style="width:100%;padding:14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;
              color:var(--az);font-family:var(--mono);font-size:20px;letter-spacing:4px;text-align:center;
@@ -58,7 +73,7 @@
     <button class="btn btn-prim" style="width:100%;padding:13px;font-size:14px;" onclick="activarLicencia()">
       🔑 Activar producto
     </button>
-    <p style="font-size:10px;color:var(--t3);margin-top:14px;">¿No tienes una clave? Contacta al administrador del sistema.</p>
+    <p style="font-size:10px;color:var(--t3);margin-top:14px;">La clave es única para este dispositivo — no es transferible.</p>
   </div>
 </div>
 

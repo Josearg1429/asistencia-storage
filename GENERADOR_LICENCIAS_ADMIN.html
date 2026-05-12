@@ -98,21 +98,31 @@ td{padding:8px 12px;border-bottom:1px solid rgba(14,165,233,.07);vertical-align:
 </div>
 
 <div class="card">
-  <div class="card-title">&#128273; Clave de Activación — 16 hex (producto)</div>
+  <div class="card-title">&#128273; Clave de Activación — 16 hex (por dispositivo)</div>
   <p style="font-size:12px;color:var(--t2);margin-bottom:16px;">
-    Genera una clave corta de activación de <strong style="color:#fff;">16 caracteres hexadecimales</strong>
-    (formato XXXX-XXXX-XXXX-XXXX). El sistema la valida sin internet usando HMAC-SHA256.
+    Genera una clave de <strong style="color:#fff;">16 caracteres hexadecimales</strong> amarrada al
+    <strong style="color:#fff;">Android ID</strong> del dispositivo. La clave solo funciona en ese dispositivo.
+    El usuario puede ver su ID en la pantalla de activación.
   </p>
-  <div class="field" style="max-width:320px;">
-    <label>Identificador / Institución (opcional)</label>
-    <input type="text" id="k16Inst" placeholder="U.E. El Carmen" maxlength="40">
+  <div class="grid">
+    <div class="field">
+      <label>Android ID del dispositivo &#42;</label>
+      <input type="text" id="k16DevId" placeholder="ej: a1b2c3d4e5f60718" maxlength="64"
+        style="font-family:'JetBrains Mono','Consolas',monospace;letter-spacing:1px;"
+        oninput="this.value=this.value.trim()">
+    </div>
+    <div class="field">
+      <label>Identificador / Institución (referencia)</label>
+      <input type="text" id="k16Inst" placeholder="U.E. El Carmen" maxlength="40">
+    </div>
   </div>
-  <button class="btn-gen" style="max-width:320px;" onclick="generateKey16()">&#9889; Generar clave 16-hex</button>
+  <button class="btn-gen" onclick="generateKey16()">&#9889; Generar clave para este dispositivo</button>
   <div class="result" id="result16">
-    <div style="font-size:11px;color:var(--t3);margin-bottom:8px;">Clave de activación:</div>
+    <div style="font-size:11px;color:var(--t3);margin-bottom:8px;">Clave de activación (solo válida para el Android ID ingresado):</div>
     <div class="lic-out" id="out16" style="font-size:26px;letter-spacing:6px;text-align:center;padding:22px;">
       <button class="copy-btn" onclick="copy16()">Copiar</button>
     </div>
+    <div id="out16Meta" style="margin-top:10px;"></div>
   </div>
 </div>
 
@@ -171,23 +181,36 @@ function b64uj(obj){
 }
 
 async function generateKey16(){
-  const inst = document.getElementById('k16Inst').value.trim() || 'Sin identificador';
-  // 8 hex aleatorios (dato)
-  const arr  = new Uint8Array(4);
-  crypto.getRandomValues(arr);
-  const data = Array.from(arr).map(b=>b.toString(16).padStart(2,'0')).join('');
-  // HMAC-SHA256(master, dato) → tomar primeros 4 bytes → 8 hex (checksum)
-  const k    = await importHmacKey(MASTER_KEY_RAW);
-  const sig  = await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(data));
-  const check= Array.from(new Uint8Array(sig)).slice(0,4).map(b=>b.toString(16).padStart(2,'0')).join('');
-  const hex16= (data + check).toUpperCase();
-  // Formatear como XXXX-XXXX-XXXX-XXXX
-  const fmt  = hex16.match(/.{1,4}/g).join('-');
-  const out  = document.getElementById('out16');
+  const deviceId = document.getElementById('k16DevId').value.trim();
+  const inst     = document.getElementById('k16Inst').value.trim() || 'Sin identificador';
+  if(!deviceId){ alert('Ingresa el Android ID del dispositivo.'); return; }
+
+  // data = SHA-256(device_id)[0:4] → 8 hex (identifica el dispositivo)
+  const devBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(deviceId));
+  const data   = Array.from(new Uint8Array(devBuf)).slice(0,4)
+                   .map(b=>b.toString(16).padStart(2,'0')).join('');
+
+  // check = HMAC-SHA256(master, data)[0:4] → 8 hex (firma del admin)
+  const k     = await importHmacKey(MASTER_KEY_RAW);
+  const sig   = await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(data));
+  const check = Array.from(new Uint8Array(sig)).slice(0,4)
+                  .map(b=>b.toString(16).padStart(2,'0')).join('');
+
+  const hex16 = (data + check).toUpperCase();
+  const fmt   = hex16.match(/.{1,4}/g).join('-');
+
+  const out = document.getElementById('out16');
   out.innerHTML = '<button class="copy-btn" onclick="copy16()">Copiar</button>';
   out.insertBefore(document.createTextNode(fmt), out.firstChild);
+
+  document.getElementById('out16Meta').innerHTML =
+    mItem('Institución', inst) +
+    mItem('Android ID', deviceId.slice(0,8)+'…') +
+    mItem('Data (dispositivo)', data.toUpperCase()) +
+    mItem('Check (HMAC admin)', check.toUpperCase());
+
   document.getElementById('result16').style.display = 'block';
-  toast('Clave 16-hex generada para: ' + inst);
+  toast('Clave generada para: ' + inst + ' · ' + deviceId.slice(0,8) + '…');
 }
 
 function copy16(){

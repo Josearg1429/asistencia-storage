@@ -81,7 +81,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         // ── Bridge: window.AndroidStorage reemplaza localStorage ──────────
-        webView.addJavascriptInterface(StorageBridge(secureStorage), "AndroidStorage")
+        webView.addJavascriptInterface(StorageBridge(secureStorage, this), "AndroidStorage")
 
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {

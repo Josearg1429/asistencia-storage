@@ -115,20 +115,52 @@ const Store = (() => {
 })();
 
 /* ══════════════════════════════════════════════
-   LICENCIA DE PRODUCTO — 16 hex (HMAC-SHA256)
-   Formato: AAAA-BBBB-CCCC-DDDD
-   Primeros 8 hex = dato aleatorio
-   Últimos 8 hex  = HMAC(master, dato)[0:4].hex()
-   Verificación offline, sin servidor externo.
+   LICENCIA DE PRODUCTO — 16 hex amarrada al dispositivo
+   Formato: AAAA-BBBB-CCCC-DDDD (16 hex = 4 grupos de 4)
+   Primeros 8 hex = SHA-256(device_id)[0:4]  ← identifica el dispositivo
+   Últimos  8 hex = HMAC-SHA256(master, primeros_8)[0:4]  ← firma del admin
+   Verificación offline sin servidor externo.
    ══════════════════════════════════════════════ */
 const _LIC_MASTER = 'EC5-MASTER-7f3a9b2e-4c8d-11ef-a1b2-0242ac130003';
 
-async function validarLicencia16(raw) {
+/** Obtiene el ID del dispositivo: Android ID en APK, UUID persistente en web. */
+async function getDeviceId() {
+  if(typeof window.AndroidStorage?.getDeviceId === 'function') {
+    const id = window.AndroidStorage.getDeviceId();
+    if(id) return id;
+  }
+  // Fallback web: UUID persistente en localStorage
+  let wid = localStorage.getItem('ec5_device_id');
+  if(!wid) {
+    const b = crypto.getRandomValues(new Uint8Array(16));
+    wid = Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join('');
+    localStorage.setItem('ec5_device_id', wid);
+  }
+  return wid;
+}
+
+/** Calcula los primeros 8 hex que corresponden a este dispositivo. */
+async function _deviceData(deviceId) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(deviceId));
+  return Array.from(new Uint8Array(buf)).slice(0,4).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+/**
+ * Valida una clave de 16 hex para este dispositivo:
+ *   1. Los primeros 8 hex deben coincidir con SHA-256(device_id)[0:4]
+ *   2. Los últimos  8 hex deben ser HMAC(master, primeros_8)[0:4]
+ */
+async function validarLicencia16(raw, deviceId) {
   const hex = raw.replace(/[^0-9a-fA-F]/g,'').toLowerCase();
   if(hex.length !== 16) return false;
   const data  = hex.slice(0, 8);
   const check = hex.slice(8);
   try {
+    // 1. Verificar que la clave es para este dispositivo
+    const did = deviceId || await getDeviceId();
+    const expectedData = await _deviceData(did);
+    if(data !== expectedData) return false;
+    // 2. Verificar firma HMAC del administrador
     const k   = await crypto.subtle.importKey('raw', new TextEncoder().encode(_LIC_MASTER),
                   {name:'HMAC', hash:'SHA-256'}, false, ['sign']);
     const sig = await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(data));
@@ -145,16 +177,16 @@ function formatLicInput(el) {
 }
 
 async function activarLicencia() {
-  const raw    = (document.getElementById('inpLicencia')?.value||'').replace(/[^0-9a-fA-F]/g,'').toLowerCase();
-  const errEl  = document.getElementById('licError');
+  const raw   = (document.getElementById('inpLicencia')?.value||'').replace(/[^0-9a-fA-F]/g,'').toLowerCase();
+  const errEl = document.getElementById('licError');
   if(raw.length !== 16) {
     if(errEl){ errEl.textContent='⚠️ Ingresa los 16 caracteres completos.'; errEl.style.display='block'; }
     return;
   }
   const valido = await validarLicencia16(raw);
   if(!valido) {
-    if(errEl){ errEl.textContent='❌ Clave inválida. Verifica el código o contacta al administrador.'; errEl.style.display='block'; }
-    audit('Intento de activación con licencia inválida','WARN');
+    if(errEl){ errEl.textContent='❌ Clave inválida para este dispositivo. Contacta al administrador.'; errEl.style.display='block'; }
+    audit('Intento de activación con licencia inválida o de otro dispositivo','WARN');
     return;
   }
   Store.setItem(LS_LIC, raw);
@@ -1717,6 +1749,10 @@ async function _continuarInit() {
   const licValida   = licGuardada ? await validarLicencia16(licGuardada) : false;
   if(!licValida) {
     if(licGuardada) Store.removeItem(LS_LIC); // limpiar licencia corrupta/manipulada
+    // Mostrar el ID del dispositivo para que el admin genere la clave correcta
+    const did = await getDeviceId();
+    const dispEl = document.getElementById('dispDeviceId');
+    if(dispEl) dispEl.textContent = did;
     document.getElementById('mLicense')?.classList.remove('hidden');
     return; // Bloquear arranque hasta que se active la licencia
   }

@@ -1,5 +1,7 @@
 package com.elcarmen.app
 
+import android.content.Context
+import android.provider.Settings
 import android.webkit.JavascriptInterface
 
 /**
@@ -10,7 +12,7 @@ import android.webkit.JavascriptInterface
  * Nota: getItem devuelve la cadena "null" (no null JS) cuando la clave
  * no existe — el wrapper Store en script.js convierte "null" → null.
  */
-class StorageBridge(private val storage: SecureStorage) {
+class StorageBridge(private val storage: SecureStorage, private val context: Context) {
 
     @JavascriptInterface
     fun setItem(key: String, value: String) = storage.setItem(key, value)
@@ -23,6 +25,11 @@ class StorageBridge(private val storage: SecureStorage) {
 
     @JavascriptInterface
     fun clear() = storage.clear()
+
+    /** Devuelve el Android ID del dispositivo para amarrar la licencia. */
+    @JavascriptInterface
+    fun getDeviceId(): String =
+        Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: ""
 
     @JavascriptInterface
     fun length(): Int = storage.length()
